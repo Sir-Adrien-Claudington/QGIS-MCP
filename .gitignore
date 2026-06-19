@@ -10,3 +10,11 @@ wheels/
 # Virtual environments
 .venv
 data/
+
+# Never commit the MCP shared-secret token (it normally lives in ~/.qgis_mcp/)
+.qgis_mcp/
+token
+*.token
+
+# Editor / agent tooling
+.claude/

@@ -1,13 +1,32 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 import socket
 import json
 from typing import AsyncIterator, Dict, Any
 from fastmcp import FastMCP, Context
 
-logging.basicConfig(level=logging.INFO, 
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("QgisMCPServer")
+
+
+# --- Hardening: shared-secret token --------------------------------------
+# The QGIS plugin generates a random token on first run and writes it to
+# ~/.qgis_mcp/token. We read the SAME file here and attach the token to every
+# command so the plugin can reject commands that don't carry it. The token is
+# never stored in this repository (see .gitignore).
+TOKEN_PATH = os.path.join(os.path.expanduser("~"), ".qgis_mcp", "token")
+
+
+def read_token():
+    """Read the shared token written by the QGIS plugin, or None if absent."""
+    try:
+        with open(TOKEN_PATH, "r", encoding="utf-8") as f:
+            tok = f.read().strip()
+            return tok or None
+    except OSError:
+        return None
 
 class QgisConnection:
     def __init__(self, host='localhost', port=9876):
@@ -42,6 +61,13 @@ class QgisConnection:
             "type": command_type,
             "params": params or {}
         }
+
+        # Attach the shared token (if the plugin has created one) so the
+        # plugin will accept the command. Read fresh each time so it works
+        # regardless of whether the plugin or this server started first.
+        token = read_token()
+        if token:
+            command["token"] = token
         
         try:
             # Send the command
@@ -260,7 +286,12 @@ def execute_code(ctx: Context, code: str) -> str:
 
 def main():
     """Run the MCP server"""
-    mcp.run(transport="sse", port=9877)
+    # Hardening: bind explicitly to 127.0.0.1 (loopback only). Without an
+    # explicit host the bind address depends on the FastMCP/uvicorn version
+    # and could default to 0.0.0.0 (reachable from the whole network). Since
+    # this port forwards straight to PyQGIS code execution, it must never be
+    # exposed beyond this machine.
+    mcp.run(transport="sse", host="127.0.0.1", port=9877)
 
 if __name__ == "__main__":
     main()

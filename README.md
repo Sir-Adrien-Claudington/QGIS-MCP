@@ -1,8 +1,25 @@
-# QGIS2OllamaMCP - QGIS Model Context Protocol Integration
+# QGIS MCP (hardened fork)
 
-QGIS2OllamaMCP connects [QGIS](https://qgis.org/) to any Ollama-hosted LLM through the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/docs/getting-started/intro), allowing agentic interacations with and control of QGIS. This integration enables prompt assisted project creation, layer loading, code execution and more.
+QGIS MCP connects [QGIS](https://qgis.org/) to an LLM through the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/docs/getting-started/intro), allowing agentic interaction with and control of QGIS. This enables prompt-assisted project creation, layer loading, code execution and more.
 
-This project is strongly based on the [BlenderMCP](https://github.com/ahujasid/blender-mcp/tree/main) project by [Siddharth Ahuja](https://x.com/sidahuj) and [QGIS MCP](https://github.com/jjsantos01/qgis_mcp) by [Juan Santos Ochoa](https://github.com/jjsantos01)    
+## Attribution & lineage
+
+This is a **hardened fork**, distributed under **GPL v3** (see `LICENSE`). Credit to the chain it builds on:
+
+- [BlenderMCP](https://github.com/ahujasid/blender-mcp/tree/main) by [Siddharth Ahuja](https://x.com/sidahuj) — the original concept.
+- [QGIS MCP](https://github.com/jjsantos01/qgis_mcp) by [Juan Santos Ochoa (jjsantos01)](https://github.com/jjsantos01) — the QGIS adaptation this is based on.
+- [QGIS2OllamaMCP](https://github.com/anitagraser/qgis_mcp) by [Anita Graser](https://github.com/anitagraser) — the immediate upstream of this fork.
+
+### What this fork changes
+
+See `CHANGELOG.md` for details. In short, two security hardening changes (both **untested against a live QGIS** — verify locally before relying on them):
+
+1. **Shared-secret token** on the plugin socket (port 9876). The plugin generates a random token in `~/.qgis_mcp/token` on first run; the MCP server reads the same file and must present the token, so other local processes can't drive QGIS just by reaching the socket.
+2. **Loopback-only MCP server.** The MCP server (port 9877) now binds explicitly to `127.0.0.1`, so it is never exposed to your network regardless of library defaults.
+
+> ⚠️ **Security note:** by design this tool lets the LLM run **arbitrary Python inside QGIS** (the `execute_code` tool). Only run the plugin/server while you are actively using it, and only on a machine you trust. After starting, confirm port 9877 is on `127.0.0.1` with `netstat -ano | findstr 9877`.
+>
+> The token check is **fail-open**: if the plugin cannot read or write `~/.qgis_mcp/token`, it logs a warning and runs without authentication rather than refusing to start. Watch the QGIS log to confirm the token loaded.
 
 
 ## Components
@@ -18,7 +35,7 @@ The system consists of two main components:
 
 - QGIS 3.X (tested with 3.38)
 - Ollama and model with support for agents (tested with ministral-3:latest)
-- For the MCP server Python environment: `pip install fastmcp ollama requests lupa`
+- For the MCP server Python environment: `pip install fastmcp ollama` (the upstream `requests` and `lupa` are not used by this code and are omitted)
 
 ### QGIS plugin
 
@@ -41,9 +58,7 @@ To install the plugin, you need to copy the folder [qgis_mcp_plugin](/qgis_mcp_p
 
 `python src/qgis_mcp/qgis_mcp_server.py `
 
-Will launch on localhost:9877/sse by default:
-
-![alt text](/assets/imgs/fast-mcp.png)
+Will launch on localhost:9877/sse by default (bound to `127.0.0.1`).
 
 #### Tools
 
@@ -70,8 +85,6 @@ You can launch an example conversation using:
 `python src/qgis_mcp/qgis_mcp_client.py`
 
 Note: you need to update the project file path to point to a project file on your machine. 
-
-![alt text](/assets/imgs/convo.png)
 
 Then launch the interactive client to start experimenting: 
 

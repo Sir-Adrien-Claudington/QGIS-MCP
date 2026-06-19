@@ -3,6 +3,7 @@ import io
 import sys
 import json
 import socket
+import secrets
 import traceback
 from qgis.core import *
 from qgis.gui import *
@@ -11,7 +12,43 @@ from qgis.PyQt.QtWidgets import QAction, QDockWidget, QVBoxLayout, QLabel, QPush
 from qgis.PyQt.QtGui import QIcon, QColor
 from qgis.utils import active_plugins
 
-class QgisMCPPluginServer(QObject):    
+
+# --- Hardening: shared-secret token --------------------------------------
+# On first run we generate a random token and store it in ~/.qgis_mcp/token.
+# The MCP server reads the same file and must include the token with every
+# command, otherwise the command is rejected. This stops any other local
+# process from driving QGIS just because it can reach the socket. The token
+# file lives in the user's home directory and is NEVER part of this repo.
+TOKEN_PATH = os.path.join(os.path.expanduser("~"), ".qgis_mcp", "token")
+
+
+def load_or_create_token():
+    """Return the shared token, creating a random one on first run.
+
+    Returns None only if the token file could not be read or written; in that
+    case the server falls back to running without authentication (and logs it).
+    """
+    try:
+        if os.path.exists(TOKEN_PATH):
+            with open(TOKEN_PATH, "r", encoding="utf-8") as f:
+                existing = f.read().strip()
+            if existing:
+                return existing
+        os.makedirs(os.path.dirname(TOKEN_PATH), exist_ok=True)
+        token = secrets.token_hex(32)
+        with open(TOKEN_PATH, "w", encoding="utf-8") as f:
+            f.write(token)
+        try:
+            # Best-effort: restrict to the owner (no-op semantics on Windows).
+            os.chmod(TOKEN_PATH, 0o600)
+        except OSError:
+            pass
+        return token
+    except OSError:
+        return None
+
+
+class QgisMCPPluginServer(QObject):
     def __init__(self, host='localhost', port=9876, iface=None):
         super().__init__()
         self.host = host
@@ -22,12 +59,27 @@ class QgisMCPPluginServer(QObject):
         self.client = None
         self.buffer = b''
         self.timer = None
+        self.token = None
     
     def start(self):
         self.running = True
+
+        # Load (or create) the shared token before we accept any connection.
+        self.token = load_or_create_token()
+        if self.token:
+            QgsMessageLog.logMessage(
+                f"MCP auth token loaded from {TOKEN_PATH}",
+                "QGIS2OllamaMCP", Qgis.Info
+            )
+        else:
+            QgsMessageLog.logMessage(
+                "Could not read/write token file; running WITHOUT authentication",
+                "QGIS2OllamaMCP", Qgis.Warning
+            )
+
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        
+
         try:
             self.socket.bind((self.host, self.port))
             self.socket.listen(1)
@@ -98,7 +150,21 @@ class QgisMCPPluginServer(QObject):
                                 command = json.loads(self.buffer.decode('utf-8'))
                                 # If successful, clear the buffer and process command
                                 self.buffer = b''
-                                response = self.execute_command(command)
+                                # Hardening: reject commands that don't carry the
+                                # correct token. If we have no token (file error)
+                                # we fall back to open mode, matching the warning
+                                # logged at startup.
+                                if self.token and command.get("token") != self.token:
+                                    QgsMessageLog.logMessage(
+                                        "Rejected command with missing/invalid token",
+                                        "QGIS2OllamaMCP", Qgis.Warning
+                                    )
+                                    response = {
+                                        "status": "error",
+                                        "message": "Authentication failed: missing or invalid token."
+                                    }
+                                else:
+                                    response = self.execute_command(command)
                                 response_json = json.dumps(response)
                                 self.client.sendall(response_json.encode('utf-8'))
                             except json.JSONDecodeError:

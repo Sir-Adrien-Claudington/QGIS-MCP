@@ -1,11 +1,12 @@
 [general]
-name=QGIS2OllamaMCP
-description=QGIS2OllamaMCP connects QGIS to an MCP Server
-version=1.0
+name=QGIS2OllamaMCP (hardened)
+description=QGIS-to-MCP bridge — hardened fork adding shared-secret token auth and loopback-only binding
+version=1.1
 qgisMinimumVersion=3.0
-author=TuNombre & Anita Graser
-email=anitagraser@gmx.at
+author=Sir-Adrien-Claudington (fork); originally TuNombre & Anita Graser
+email=285565754+Sir-Adrien-Claudington@users.noreply.github.com
 category=Plugins
+changelog=1.1 Hardened fork: shared-secret token auth on the plugin socket; MCP server pinned to 127.0.0.1; attribution + security docs. Based on Anita Graser's QGIS2OllamaMCP, itself based on jjsantos01/qgis_mcp and BlenderMCP.
 
 [about]
-about=QGIS MCP connects QGIS to an MCP Server
+about=Hardened fork of QGIS2OllamaMCP. Connects QGIS to an MCP server so an LLM can drive QGIS. This fork adds a shared-secret token on the plugin socket and binds the MCP server to 127.0.0.1 only. Licensed GPLv3.
