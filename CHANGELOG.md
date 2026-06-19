@@ -11,9 +11,11 @@ itself based on [jjsantos01/qgis_mcp](https://github.com/jjsantos01/qgis_mcp) an
 - **Shared-secret token auth on the plugin socket (port 9876).** The QGIS plugin
   now generates a random token on first run, stored in `~/.qgis_mcp/token`, and
   rejects any command that does not present the matching token. The MCP server
-  reads the same file and attaches the token to every command. This closes the
-  "any local process can drive QGIS" gap. The token file is never committed
-  (see `.gitignore`).
+  reads the same file and attaches the token to every command. This raises the
+  bar against *other* local users and sandboxed processes that can reach the
+  socket but cannot read your home directory; a process running as the same
+  user can still read `~/.qgis_mcp/token` and present it, so it is not a full
+  barrier. The token file is never committed (see `.gitignore`).
   - *Note:* the token only protects direct connections to port 9876. The MCP
     server is a trusted forwarder — anything it accepts on 9877 is forwarded with
     a valid token. The protection for the 9877 surface is the loopback bind below.
