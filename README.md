@@ -26,7 +26,7 @@ See `CHANGELOG.md` for details. In short, two security hardening changes (both *
 
 The system consists of two main components:
 
-1. **[QGIS plugin](/qgis_mcp_plugin/)**: A QGIS plugin that creates a socket server within QGIS to receive and execute commands.
+1. **[QGIS plugin](/qgis_mcp_hardened/)**: A QGIS plugin that creates a socket server within QGIS to receive and execute commands.
 2. **[MCP Server](/src/qgis_mcp/qgis_mcp_server.py)**: A Python server that implements the Model Context Protocol and connects to the QGIS plugin.
 
 ## Installation
@@ -39,7 +39,7 @@ The system consists of two main components:
 
 ### QGIS plugin
 
-To install the plugin, you need to copy the folder [qgis_mcp_plugin](/qgis_mcp_plugin/) and its content into your QGIS plugins folder.
+To install the plugin, you need to copy the folder [qgis_mcp_hardened](/qgis_mcp_hardened/) and its content into your QGIS plugins folder. The folder is named `qgis_mcp_hardened` (not `qgis_mcp_plugin`) on purpose, so it does not collide with the official `qgis_mcp_plugin` on plugins.qgis.org.
 
 
 ## Usage
