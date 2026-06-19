@@ -680,7 +680,9 @@ class QgisMCPPlugin:
             # Create dock widget if it doesn't exist
             if not self.dock_widget:
                 self.dock_widget = QgisMCPDockWidget(self.iface)
-                self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dock_widget)
+                # Qt6 (QGIS 4) scopes enums; Qt.RightDockWidgetArea was removed.
+                # The scoped form also works on modern QGIS 3.x (PyQt5).
+                self.iface.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_widget)
                 # Connect close event
                 self.dock_widget.closed.connect(self.dock_closed)
             else:
