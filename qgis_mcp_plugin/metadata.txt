@@ -3,6 +3,7 @@ name=QGIS2OllamaMCP (hardened)
 description=QGIS-to-MCP bridge — hardened fork adding shared-secret token auth and loopback-only binding
 version=1.1
 qgisMinimumVersion=3.0
+qgisMaximumVersion=4.99
 author=Sir-Adrien-Claudington (fork); originally TuNombre & Anita Graser
 email=285565754+Sir-Adrien-Claudington@users.noreply.github.com
 category=Plugins
