@@ -563,6 +563,12 @@ class QgisMCPPluginServer(QObject):
             # Set map canvas properties
             rect = self.iface.mapCanvas().extent()
             ms.setExtent(rect)
+            # Reproject layers whose CRS differs from the canvas/project CRS.
+            # Without a destination CRS, QgsMapSettings performs no reprojection,
+            # so any layer not already in the canvas CRS is drawn at its raw
+            # coordinates and falls outside the extent (invisible in the output).
+            ms.setDestinationCrs(self.iface.mapCanvas().mapSettings().destinationCrs())
+            ms.setTransformContext(QgsProject.instance().transformContext())
             ms.setOutputSize(QSize(width, height))
             ms.setBackgroundColor(QColor(255, 255, 255))
             ms.setOutputDpi(96)
